@@ -1,0 +1,60 @@
+version: "3.7"
+
+volumes:
+  postgres:
+
+networks:
+  twt:
+    name: twt
+    external: true
+
+services:
+
+  redis:
+    image: redis:7
+    ports: ["6379:6379"]
+    restart: unless-stopped
+    networks: [twt]
+
+  postgres:
+    image: postgres:15beta1
+    ports: ["5432:5432"]
+    restart: unless-stopped
+    volumes: ["postgres:/var/lib/postgresql/data"]
+    networks: [twt]
+    environment:
+      - POSTGRES_DB=TWT
+      - POSTGRES_USER=TWT
+      - POSTGRES_PASSWORD=TWT
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
+    ports: ["2181:2181"]
+    restart: unless-stopped
+    networks: [twt]
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+
+  kafka:
+    image: confluentinc/cp-kafka
+    ports: ["29092:29092"]
+    restart: unless-stopped
+    networks: [twt]
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+
+  economy:
+    build:
+      context: services/economy
+      dockerfile: Dockerfile
+    ports: ["8000:8000"]
+    restart: unless-stopped
+    networks: [twt]
+    env_file: .env
+    depends_on: [redis, postgres, kafka]
