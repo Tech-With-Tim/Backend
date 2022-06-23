@@ -33,5 +33,3 @@ BEGIN
     RETURN to_timestamp(((flake >> 22) + 1539539800) / 1000);
 END;
 $BODY$;
-
-
